@@ -1,3 +1,15 @@
+# As of 7/31/2020:
+# This code is able to:
+# 1. create a list of the 500 S&P companies, collect the OHLC numbers for these companies from Yahoo Finance, and export this data as seperate csv files.
+# 2. take those 500 csv files and collect the adj close values for each company and export it into a main data file.
+# 3. create correlations between 5 years of OHLC values for the companies and create a heatmap to visualize the correlations
+# 4. extract future sets of the data (future time = 7 days)
+# 5. train a machine learning algorithm to predict if a company will experience more buying or selling within the next 7 days
+# 6. output = the values that the machine learning algorithm were trained with (in order to determine if the training was balanced), an accuracy of how well the algorithm 
+#    is able to learn, and the predicted values from the algorithm.
+
+
+# importing all the needed modules for this code
 import bs4 as bs
 from collections import Counter
 import datetime as dt
@@ -13,9 +25,12 @@ from sklearn.model_selection import train_test_split
 from sklearn import svm, neighbors
 from sklearn.ensemble import VotingClassifier, RandomForestClassifier
 
+
+# style to be used for the correlation heat maps
 style.use('ggplot')
 
 
+# the purpose of this function is to extract the names of 500 s&p companies and exoort as a pickle file
 def save_sp500_tickers():
     resp = requests.get('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
     soup = bs.BeautifulSoup(resp.text, "lxml")
@@ -33,9 +48,10 @@ def save_sp500_tickers():
 
     return tickers
 
-
+# comment out the execution of this function
 # save_sp500_tickers()
 
+# the purpose of this function is to get the s&p ohlc data from yahoo and export the data as seperate csv files (one per company)
 def get_data_from_yahoo(reload_sp500=False):
     if reload_sp500:
         tickers = save_sp500_tickers()
@@ -58,9 +74,10 @@ def get_data_from_yahoo(reload_sp500=False):
         else:
             print('Already have {}'.format(ticker))
 
-
+# comment out the execution of this function
 # get_data_from_yahoo(True)
 
+#the purpose of this function is to compile all the data from the 500 s&p companies and put the data into one csv file
 def compile_data():
     with open("sp500tickers.pickle", "rb") as f:
         tickers = pickle.load(f)
@@ -88,9 +105,10 @@ def compile_data():
     print(main_df.head())
     main_df.to_csv('sp500_joined_closes.csv')
 
-
+# comment out the execution of this function
 # compile_data()
 
+# the purpose of this function is to find correlations between stock prices of companies and visualize these correlations with a heatmap
 def visualize_data():
     df = pd.read_csv('sp500_joined_closes.csv')
     df_corr = df.corr()
@@ -118,9 +136,10 @@ def visualize_data():
     plt.tight_layout()
     plt.show()
 
-
+# comment out the execution of this function
 # visualize_data()
 
+# the purpose of this function is to pre-process the compiled data with labels for machine learning
 def process_data_for_labels(ticker):
     how_many_days = 7  # time frame for whether we consider buying, selling, or holding
     df = pd.read_csv('sp500_joined_closes.csv', index_col=0)
@@ -133,7 +152,10 @@ def process_data_for_labels(ticker):
     df.fillna(0, inplace=True)
     return tickers, df
 
+# comment out the execution of this function
+# process_data_for_labels()
 
+# the purpose of this function is to define when stocks will be sold, bought, or held based on correlation values
 def buy_sell_hold(*args):
     cols = [c for c in args]
     requirement = 0.02  # we are considering if the stock price will change by 2% within the next 7 days
@@ -144,7 +166,10 @@ def buy_sell_hold(*args):
             return -1  # this signifies that the stock is falling so we should sell
     return 0  # this signifies that the stock is holding stead so we should hold
 
+# comment out the execution of this function
+# buy_sell_hold()
 
+# the purpose of this function is to extract future sets of stock prices within a week in advance
 def extract_future_sets(ticker):
     tickers, df = process_data_for_labels(ticker)
 
@@ -174,7 +199,10 @@ def extract_future_sets(ticker):
 
     return X, y, df
 
+# comment out the execution of this function
+# extract_future_sets()
 
+# the purpose of this function is to train the machine learning algorithm
 def do_ml(ticker):
     X, y, df = extract_future_sets(ticker)
 
@@ -194,4 +222,5 @@ def do_ml(ticker):
 
     return confidence
 
-do_ml('BAC')
+# comment out the execution of this function
+do_ml()
