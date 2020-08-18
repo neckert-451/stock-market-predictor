@@ -78,7 +78,7 @@ win.geometry("400x400")
 
 
 # function to open a new window with the list of stock names
-def openNewWindow():
+def open_new_window():
 
     new_window = Toplevel(win)
     new_window.title("List of Stocks")
@@ -88,24 +88,33 @@ def openNewWindow():
     label3.pack(pady=10)
 
 
+def user_input_execute():
+    win.destroy()
+
+
 # creating the GUI
 label = Label(win, text="Stock Market Predictor")
 label.pack(pady=3)
 label2 = Label(win, text="Please enter the name of the stock")
 label2.pack(pady=10)
-e1 = Entry(win)
-e1.pack(pady=10)
+user_input = Entry()
+user_input.pack(pady=10)
+
+btn1 = Button(win, text="Next", command=user_input_execute)
+btn1.pack(pady=10)
+
 
 # button which, when clicked, opens a new window
-# btn = Button(win, text="Click here to search for the name of the stock", command=openNewWindow)
+# btn = Button(win, text="Click here to search for the name of the stock", command=open_new_window)
 # btn.pack(pady=10)
 
 mainloop()
 
+print(user_input)
 
 SEQ_LEN = 60  # how long of a preceding sequence to collect for RNN
 FUTURE_PERIOD_PREDICT = 3  # how far into the future are we trying to predict?
-RATIO_TO_PREDICT = 'BAC'  # bank of america stock prediction
+RATIO_TO_PREDICT = user_input
 
 
 def classify(current, future):
