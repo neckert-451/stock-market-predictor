@@ -23,6 +23,7 @@ from tqdm import tqdm
 
 style.use('ggplot')
 
+
 # -------------------
 # saving ticker names
 def save_sp500_tickers():
@@ -44,6 +45,7 @@ def save_sp500_tickers():
 
 
 save_sp500_tickers()
+
 
 # ------------------------------------------------
 # getting the stock information from yahoo finance
@@ -126,7 +128,6 @@ def passing_user_entry():
     plt.yticks([])
     plt.xlabel('Time')
     plt.ylabel('Stock Prices')
-
     plt.show()
 
 
@@ -156,11 +157,11 @@ label4 = tk.Label(win, text="===================================================
 label4.pack(pady=10)
 
 # creating a way for the user to search for a stock company by the stock name (in a list)
-label3 = tk.Label(win, text="If you don't know the name of the stock, please click below to search for it")
-label3.pack(pady=10, padx=10)
+#label3 = tk.Label(win, text="If you don't know the name of the stock, please click below to search for it")
+#label3.pack(pady=10, padx=10)
 # creating a button which, when clicked, opens a new window (list of stock names)
-btn = Button(win, text="Click here to search by stock name", command=open_new_window)
-btn.pack(pady=10, padx=10)
+#btn = Button(win, text="Click here to search by stock name", command=open_new_window)
+#btn.pack(pady=10, padx=10)
 
 mainloop()
 
@@ -261,10 +262,10 @@ def preprocess_df(df):
 main_df = pd.DataFrame()
 # the ratios are the stocks that are used for training and validation
 # this list needs to be all the csv files or a random bunch of them
-ratios = ["ABC", "ACN", "BAC", "GOOGL", "MMM"]
+ratios = ["A", "AAL", "AAP", "AAPL", "ABBV", "ABC", "ABMD", "ABT", "ACN", "ADBE", "ADI", "ADM", "ADP", "ADSK", "AEE"]
 
 for ratio in ratios:
-    print(ratio)
+    #print(ratio)
     dataset = f'stock_dfs/{ratio}.csv'
     df = pd.read_csv(dataset, names=['date', 'high', 'low', 'open', 'close', 'volume', 'adj close'])
 
@@ -343,6 +344,7 @@ model.compile(
 train_y = np.array(train_y)
 validation_y = np.array(validation_y)
 
+# training the model
 history = model.fit(
     train_x, train_y,
     batch_size=BATCH_SIZE,
@@ -355,21 +357,70 @@ score = model.evaluate(validation_x, validation_y, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
 
+# printing a summary of the model
+model.summary()
 
-# ----------------------------------------------------------------------
-# plotting the last 15%
+# --------------
+# finding the prediction values based on training and validation
+trainPredict = model.predict(train_x)
+testPredict = model.predict(validation_x)
 
-x = validation_x
-y = validation_y
-
-# plotting the historical data for desired stock company
-plt.plot(x, y, color='red', linestyle='solid')
-plt.title(f'{user_input} Closing Stock Prices')
-
-plt.xticks([])
-plt.yticks([])
+# --------
+# plotting
+# plotting the training and testing predictions
+plt.plot(trainPredict, color='Red', label='Training Predictions')
+plt.plot(testPredict, color='Blue', label='Testing Predictions')
+plt.title(f'LSTM Results for {user_input}: Predictions vs Test Values')
 plt.xlabel('Time')
-plt.ylabel('Stock Prices')
-
+plt.ylabel('Stock Price (USD)')
+plt.legend()
 plt.show()
 
+# --------------------------------------------------
+# create and evaluate an updated autoregressive model
+from math import sqrt
+import pandas as pd
+from pandas import read_csv
+from statsmodels.tsa.ar_model import AutoReg
+from sklearn.metrics import mean_squared_error
+
+
+# load dataset
+series = read_csv(f'stock_dfs\{user_input}.csv', usecols=[0, 6], header=0, index_col=0,
+                  parse_dates=True, squeeze=True)
+
+# split dataset
+X = series.values
+train, test = X[1:len(X)-7], X[len(X)-7:]
+
+# train autoregression
+window = 29
+model = AutoReg(train, lags=29)
+model_fit = model.fit()
+coef = model_fit.params
+
+# walk forward over time steps in test
+history = train[len(train)-window:]
+history = [history[i] for i in range(len(history))]
+predictions = list()
+for t in range(len(test)):
+    length = len(history)
+    lag = [history[i] for i in range(length-window, length)]
+    yhat = coef[0]
+    for d in range(window):
+        yhat += coef[d+1] * lag[window-d-1]
+    obs = test[t]
+    predictions.append(yhat)
+    history.append(obs)
+    print('predicted=%f, expected=%f' % (yhat, obs))
+rmse = sqrt(mean_squared_error(test, predictions))
+print('Test RMSE: %.3f' % rmse)
+
+# plot
+plt.plot(test, color='blue', label='test values')
+plt.plot(predictions, color='red', label='predicted values')
+plt.title(f'Autoregression Results for {user_input}: Predictions vs Test Values')
+plt.xlabel('Time')
+plt.ylabel('Stock Price (USD)')
+plt.legend()
+plt.show()
